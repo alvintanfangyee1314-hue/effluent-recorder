@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#1e40af">
+    <meta name="description" content="Full-featured effluent flow tracking with charts, alerts & advanced analytics">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+    <title>Effluent Flow Recorder - Enhanced Pro Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+        }
+        
+        .filter-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
+        
+        /* Dark Mode */
+        body.dark-mode {
+            background: linear-gradient(to bottom right, #1e293b, #0f172a);
+        }
+        
+        body.dark-mode .bg-white {
+            background-color: #1e293b !important;
+            color: #e2e8f0;
+        }
+        
+        body.dark-mode .bg-gradient-to-r {
+            background: linear-gradient(to right, #3730a3, #581c87) !important;
+        }
+        
+        body.dark-mode .text-gray-600,
+        body.dark-mode .text-gray-700,
+        body.dark-mode .text-gray-900 {
+            color: #cbd5e1 !important;
+        }
+        
+        body.dark-mode .border-gray-300 {
+            border-color: #475569 !important;
+        }
+        
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background-color: #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        
+        body.dark-mode table {
+            color: #e2e8f0;
+        }
+        
+        body.dark-mode .bg-gray-50,
+        body.dark-mode .bg-gray-100 {
+            background-color: #334155 !important;
+        }
+        
+        /* Alert Animation */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert-banner {
+            animation: slideDown 0.5s ease-out;
+        }
+        
+        /* Row Highlight on Hover */
+        tbody tr:hover {
+            background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* Checkbox Styling */
+        .row-checkbox {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        
+        /* Template Badge */
+        .template-badge {
+            transition: all 0.3s;
+        }
+        
+        .template-badge:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            /* Larger touch targets for mobile */
+            button, .row-checkbox, select, input[type="date"], input[type="time"] {
+                min-height: 44px;
+                min-width: 44px;
+                touch-action: manipulation;
+            }
+            
+            /* Make table scrollable on mobile */
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Stack cards vertically on mobile */
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Improve modal sizing on mobile */
+            .modal-backdrop > div {
+                max-width: 95vw !important;
+                max-height: 90vh !important;
+                overflow-y: auto;
+            }
+            
+            /* Make text inputs more usable */
+            input[type="number"],
+            input[type="text"],
+            textarea {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+        }
+        
+        /* Prevent text selection on buttons */
+        button {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* PWA Install Banner */
+        .install-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            max-width: 90%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-slate-100 min-h-screen p-4">
+    <!-- Alert Banner Container -->
+    <div id="alertContainer" class="fixed top-0 left-0 right-0 z-50"></div>
+    
+    <!-- PWA Install Banner -->
+    <div id="installBanner" style="display: none;" class="install-banner no-print">
+        <div class="bg-blue-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">📱</span>
+                <div>
+                    <p class="font-bold">Install Effluent Recorder</p>
+                    <p class="text-sm text-blue-100">Access offline & get a native app experience</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="installPWA()" class="px-4 py-2 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50">
+                    Install
+                </button>
+                <button onclick="dismissInstall()" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800">
+                    Later
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="shortcutsModal" style="display: none;" class="fixed inset-0 modal-backdrop bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">⌨️ Keyboard Shortcuts</h3>
+                <button onclick="closeShortcutsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + N</span>
+                    <span class="text-gray-600">New Entry (Clear Form)</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + S</span>
+                    <span class="text-gray-600">Save Record</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + F</span>
+                    <span class="text-gray-600">Focus Search</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + D</span>
+                    <span class="text-gray-600">Toggle Dark Mode</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + C</span>
+                    <span class="text-gray-600">Copy Last Entry</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + Z</span>
+                    <span class="text-gray-600">Undo Last Action</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + B</span>
+                    <span class="text-gray-600">Backup Data</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">Ctrl + P</span>
+                    <span class="text-gray-600">Export PDF</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">ESC</span>
+                    <span class="text-gray-600">Cancel/Close</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-semibold">?</span>
+                    <span class="text-gray-600">Show This Help</span>
+                </div>
+            </div>
+            <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded">
+                <p class="text-sm"><strong>Tip:</strong> Press <kbd>?</kbd> anytime to see shortcuts!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header with Dark Mode Toggle -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-blue-900 mb-2 flex items-center gap-3">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                        </svg>
+                        Effluent Recorder - Enhanced Pro
+                    </h1>
+                    <p class="text-gray-600">Full-featured tracking with charts, alerts & advanced analytics</p>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="toggleDarkMode()" class="tooltip no-print px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
+                        <span id="darkModeIcon">🌙</span>
+                        <span class="tooltiptext">Toggle Dark Mode (Ctrl+D)</span>
+                    </button>
+                    <button onclick="showShortcutsModal()" class="tooltip no-print px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                        ⌨️
+                        <span class="tooltiptext">Keyboard Shortcuts (?)</span>
+                    </button>
+                    <button onclick="exportPDF()" class="tooltip no-print px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        📄 PDF
+                        <span class="tooltiptext">Export PDF Report (Ctrl+P)</span>
+                    </button>
+                    <button onclick="exportCSV()" class="tooltip no-print px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        📊 CSV
+                        <span class="tooltiptext">Export to CSV</span>
+                    </button>
+                    <button onclick="backupData()" class="tooltip no-print px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        💾 Backup
+                        <span class="tooltiptext">Download Backup (Ctrl+B)</span>
+                    </button>
+                    <button onclick="document.getElementById('restoreFile').click()" class="tooltip no-print px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        📥 Restore
+                        <span class="tooltiptext">Restore from Backup</span>
+                    </button>
+                    <input type="file" id="restoreFile" accept=".json" onchange="restoreData(event)" style="display: none;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-lg p-6 mb-6 text-white no-print">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                    </svg>
+                    Advanced Filters & Search
+                </h2>
+                <button onclick="clearFilters()" class="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-semibold transition">
+                    Clear All Filters
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Search Box -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2">🔍 Search All Fields</label>
+                    <input type="text" id="globalSearch" oninput="applyFilters()" placeholder="Type to search..." class="w-full px-3 py-2 border-2 border-white rounded-lg text-gray-900 font-semibold">
+                </div>
+                
+                <!-- Operator Filter -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2">👤 Filter by Operator</label>
+                    <select id="filterOperator" onchange="applyFilters()" class="w-full px-3 py-2 border-2 border-white rounded-lg text-gray-900 font-semibold">
+                        <option value="">🌍 All Operators</option>
+                    </select>
+                </div>
+
+                <!-- Effluent Type Filter -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2">🌊 Filter by Type</label>
+                    <select id="filterType" onchange="applyFilters()" class="w-full px-3 py-2 border-2 border-white rounded-lg text-gray-900 font-semibold">
+                        <option value="">🌊 All Types</option>
+                        <option value="Raw Effluent">Raw Effluent</option>
+                        <option value="Treated Effluent">Treated Effluent</option>
+                        <option value="Industrial Wastewater">Industrial Wastewater</option>
+                        <option value="Domestic Sewage">Domestic Sewage</option>
+                        <option value="Cooling Water">Cooling Water</option>
+                        <option value="Process Water">Process Water</option>
+                        <option value="Stormwater Runoff">Stormwater Runoff</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Date Filter -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2">📅 Filter by Date</label>
+                    <input type="date" id="filterDate" onchange="applyFilters()" class="w-full px-3 py-2 border-2 border-white rounded-lg text-gray-900 font-semibold">
+                </div>
+            </div>
+
+            <!-- Active Filters Display -->
+            <div id="activeFilters" class="mt-4 flex flex-wrap gap-2 min-h-8"></div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 no-print">
+            <h3 class="text-lg font-bold mb-4 text-gray-800">📊 Data Visualization (Separated by Date)</h3>
+            <div id="chartsContainer"></div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div class="bg-white rounded-lg p-4 shadow">
+                <p class="text-sm text-gray-600">Filtered Records</p>
+                <p id="totalRecords" class="text-2xl font-bold text-blue-600">0</p>
+                <p class="text-xs text-gray-500 mt-1">of <span id="totalAllRecords">0</span> total</p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow">
+                <p class="text-sm text-gray-600">Today's Records</p>
+                <p id="todayRecords" class="text-2xl font-bold text-green-600">0</p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow">
+                <p class="text-sm text-gray-600">Total Flow</p>
+                <p id="totalFlow" class="text-2xl font-bold text-purple-600">0 m³</p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow">
+                <p class="text-sm text-gray-600">Avg pH</p>
+                <p id="avgPH" class="text-2xl font-bold text-orange-600">-</p>
+                <p class="text-xs text-gray-500 mt-1">Range: <span id="phRange">-</span></p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow">
+                <p class="text-sm text-gray-600">Total Operators</p>
+                <p id="totalOperators" class="text-2xl font-bold text-indigo-600">0</p>
+            </div>
+        </div>
+
+        <!-- Templates Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 no-print">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">📋 Quick Entry Templates</h3>
+                <button onclick="showSaveTemplateDialog()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
+                    💾 Save Current as Template
+                </button>
+            </div>
+            <div id="templatesContainer" class="flex flex-wrap gap-2">
+                <span class="text-sm text-gray-500">No templates saved yet. Save your first template!</span>
+            </div>
+        </div>
+
+        <!-- Input Form -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                    </svg>
+                    <span id="formTitle">New Reading Entry</span>
+                </h2>
+                <div class="flex gap-2 no-print">
+                    <button onclick="copyLastEntry()" class="tooltip px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
+                        📋 Copy Last Entry
+                        <span class="tooltiptext">Copy previous entry (Ctrl+C)</span>
+                    </button>
+                    <button onclick="clearForm()" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 text-sm">
+                        🗑️ Clear Form
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <!-- Date & Time -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                    <input type="date" id="inputDate" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+                    <input type="time" id="inputTime" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Effluent Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Effluent Type *</label>
+                    <select id="inputType" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Type</option>
+                        <option value="Raw Effluent">Raw Effluent</option>
+                        <option value="Treated Effluent">Treated Effluent</option>
+                        <option value="Industrial Wastewater">Industrial Wastewater</option>
+                        <option value="Domestic Sewage">Domestic Sewage</option>
+                        <option value="Cooling Water">Cooling Water</option>
+                        <option value="Process Water">Process Water</option>
+                        <option value="Stormwater Runoff">Stormwater Runoff</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Basic Parameters -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">pH Value</label>
+                    <input type="number" id="inputPH" step="0.1" min="0" max="14" placeholder="0.0 - 14.0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Temperature (°C)</label>
+                    <input type="number" id="inputTemp" step="0.1" placeholder="e.g., 25.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Flow Volume (m³)</label>
+                    <input type="number" id="inputVolume" step="0.01" min="0" placeholder="e.g., 100.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Flow Rate (m³/hr)</label>
+                    <input type="number" id="inputFlowRate" step="0.01" min="0" placeholder="e.g., 10.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Location & Operator -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sample Point / Location</label>
+                    <input type="text" id="inputLocation" placeholder="e.g., Outlet 1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="md:col-span-2 lg:col-span-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                        👤 Operator Name *
+                        <span class="text-xs text-red-600">(Required)</span>
+                    </label>
+                    <input type="text" id="inputOperator" required placeholder="Your name" list="operatorsList" class="w-full px-3 py-2 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 bg-blue-50">
+                    <datalist id="operatorsList"></datalist>
+                </div>
+            </div>
+
+            <!-- Remarks -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Remarks / Notes</label>
+                <textarea id="inputRemarks" rows="2" placeholder="Any observations..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+
+            <!-- Photo Upload -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">📷 Upload Photos</label>
+                <input type="file" id="inputPhotos" multiple accept="image/*" capture="environment" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button onclick="saveRecord()" class="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                    ✅ <span id="saveButtonText">Save Record</span>
+                </button>
+                <button onclick="cancelEdit()" id="cancelButton" style="display: none;" class="px-6 py-3 bg-gray-400 text-white font-semibold rounded-lg hover:bg-gray-500 transition">
+                    Cancel
+                </button>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div id="bulkActionsBar" style="display: none;" class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6 rounded-lg no-print">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="font-semibold"><span id="selectedCount">0</span> record(s) selected</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="bulkDelete()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        🗑️ Delete Selected
+                    </button>
+                    <button onclick="clearSelection()" class="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">
+                        Clear Selection
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Records Table -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+            <div class="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4 flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                    📊 <span id="recordsTitle">All Records</span>
+                </h2>
+                <span class="text-sm text-white" id="paginationInfo">0 records</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3 text-left no-print">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="row-checkbox">
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date & Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">pH</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Temp</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Volume</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Flow Rate</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Operator</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase no-print">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsBody">
+                        <tr>
+                            <td colspan="11" class="px-4 py-8 text-center text-gray-500">No records found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="no-print bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
+                <button onclick="prevPage()" id="prevBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                    ← Previous
+                </button>
+                <span class="text-sm text-gray-600" id="pageInfo">Page 1 of 1</span>
+                <button onclick="nextPage()" id="nextBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                    Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Modal -->
+    <div id="photoModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div class="p-4 border-b flex items-center justify-between sticky top-0 bg-white">
+                <h3 class="text-lg font-semibold">Photos</h3>
+                <button onclick="closePhotoModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="photoGallery" class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // ========== PWA CONFIGURATION ==========
+        let deferredPrompt;
+        const manifestJson = {
+            "name": "Effluent Flow Recorder - Enhanced Pro",
+            "short_name": "Effluent Recorder",
+            "description": "Full-featured effluent flow tracking with charts, alerts & advanced analytics",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#1e40af",
+            "theme_color": "#1e40af",
+            "orientation": "portrait-primary",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e40af'/><text y='70' x='50' text-anchor='middle' font-size='60' fill='white'>💧</text></svg>",
+                    "sizes": "192x192",
+                    "type": "image/svg+xml",
+                    "purpose": "any maskable"
+                },
+                {
+                    "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231e40af'/><text y='70' x='50' text-anchor='middle' font-size='60' fill='white'>💧</text></svg>",
+                    "sizes": "512x512",
+                    "type": "image/svg+xml",
+                    "purpose": "any maskable"
+                }
+            ]
+        };
+
+        // Create and inject manifest
+        const manifestBlob = new Blob([JSON.stringify(manifestJson)], { type: 'application/json' });
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        document.querySelector('link[rel="manifest"]').setAttribute('href', manifestURL);
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                registerServiceWorker();
+            });
+        }
+
+        function registerServiceWorker() {
+            const swCode = `
+                const CACHE_NAME = 'effluent-recorder-v1';
+                const urlsToCache = [
+                    './',
+                    'https://cdn.tailwindcss.com',
+                    'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+                ];
+
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME)
+                            .then(cache => cache.addAll(urlsToCache))
+                    );
+                });
+
+                self.addEventListener('fetch', event => {
+                    event.respondWith(
+                        caches.match(event.request)
+                            .then(response => response || fetch(event.request))
+                    );
+                });
+
+                self.addEventListener('activate', event => {
+                    event.waitUntil(
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cacheName => {
+                                    if (cacheName !== CACHE_NAME) {
+                                        return caches.delete(cacheName);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                });
+            `;
+
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swURL = URL.createObjectURL(blob);
+
+            navigator.serviceWorker.register(swURL)
+                .then(registration => {
+                    console.log('Service Worker registered successfully');
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        }
+
+        // PWA Install Prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallBanner();
+        });
+
+        function showInstallBanner() {
+            const banner = document.getElementById('installBanner');
+            if (banner && !localStorage.getItem('installDismissed')) {
+                banner.style.display = 'block';
+            }
+        }
+
+        function installPWA() {
+            const banner = document.getElementById('installBanner');
+            banner.style.display = 'none';
+            
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        showAlert('App installed successfully! 🎉', 'success');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        function dismissInstall() {
+            document.getElementById('installBanner').style.display = 'none';
+            localStorage.setItem('installDismissed', 'true');
+        }
+
+        // ========== GLOBAL STATE ==========
+        let records = [];
+        let filteredRecords = [];
+        let templates = [];
+        let editingId = null;
+        let currentPage = 1;
+        const recordsPerPage = 15;
+        let undoStack = [];
+        let selectedRecords = new Set();
+
+        // ========== INITIALIZATION ==========
+        window.onload = function() {
+            loadRecords();
+            loadTemplates();
+            setCurrentDateTime();
+            updateOperatorFilter();
+            updateOperatorsList();
+            applyFilters();
+            initializeCharts();
+            setupKeyboardShortcuts();
+            
+            // Check for dark mode preference
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkModeIcon').textContent = '☀️';
+            }
+        };
+
+        // ========== DATA MANAGEMENT ==========
+        function loadRecords() {
+            const stored = localStorage.getItem('effluentRecords');
+            if (stored) {
+                records = JSON.parse(stored);
+            }
+        }
+
+        function saveRecords() {
+            localStorage.setItem('effluentRecords', JSON.stringify(records));
+        }
+
+        function loadTemplates() {
+            const stored = localStorage.getItem('effluentTemplates');
+            if (stored) {
+                templates = JSON.parse(stored);
+                renderTemplates();
+            }
+        }
+
+        function saveTemplates() {
+            localStorage.setItem('effluentTemplates', JSON.stringify(templates));
+        }
+
+        // ========== DARK MODE ==========
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            document.getElementById('darkModeIcon').textContent = isDark ? '☀️' : '🌙';
+        }
+
+        // ========== KEYBOARD SHORTCUTS ==========
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+S: Save
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    saveRecord();
+                }
+                // Ctrl+N: New/Clear Form
+                else if (e.ctrlKey && e.key === 'n') {
+                    e.preventDefault();
+                    clearForm();
+                }
+                // Ctrl+F: Focus Search
+                else if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('globalSearch').focus();
+                }
+                // Ctrl+D: Dark Mode
+                else if (e.ctrlKey && e.key === 'd') {
+                    e.preventDefault();
+                    toggleDarkMode();
+                }
+                // Ctrl+C: Copy Last Entry
+                else if (e.ctrlKey && e.key === 'c' && !e.shiftKey) {
+                    e.preventDefault();
+                    copyLastEntry();
+                }
+                // Ctrl+Z: Undo
+                else if (e.ctrlKey && e.key === 'z') {
+                    e.preventDefault();
+                    undoLastAction();
+                }
+                // Ctrl+B: Backup
+                else if (e.ctrlKey && e.key === 'b') {
+                    e.preventDefault();
+                    backupData();
+                }
+                // Ctrl+P: Export PDF
+                else if (e.ctrlKey && e.key === 'p') {
+                    e.preventDefault();
+                    exportPDF();
+                }
+                // ESC: Cancel
+                else if (e.key === 'Escape') {
+                    cancelEdit();
+                    closePhotoModal();
+                    closeShortcutsModal();
+                }
+                // ?: Show shortcuts
+                else if (e.key === '?' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                    e.preventDefault();
+                    showShortcutsModal();
+                }
+            });
+        }
+
+        function showShortcutsModal() {
+            document.getElementById('shortcutsModal').style.display = 'flex';
+        }
+
+        function closeShortcutsModal() {
+            document.getElementById('shortcutsModal').style.display = 'none';
+        }
+
+        // ========== ALERTS SYSTEM (WARNING ALERTS REMOVED) ==========
+        function showAlert(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('alertContainer');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            
+            const alert = document.createElement('div');
+            alert.className = `alert-banner ${colors[type]} text-white px-6 py-4 shadow-lg flex items-center justify-between mb-2 mx-4 mt-2 rounded-lg`;
+            alert.innerHTML = `
+                <span class="flex items-center gap-2">
+                    ${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}
+                    <strong>${message}</strong>
+                </span>
+                <button onclick="this.parentElement.remove()" class="text-white hover:text-gray-200 text-xl ml-4">&times;</button>
+            `;
+            
+            container.appendChild(alert);
+            
+            if (duration > 0) {
+                setTimeout(() => alert.remove(), duration);
+            }
+        }
+
+        function checkAlerts() {
+            // pH violation checking removed - no more alert banners
+        }
+
+        function playAlertSound() {
+            // Simple beep using Web Audio API
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.log('Audio alert not supported');
+            }
+        }
+
+        // ========== TEMPLATES SYSTEM ==========
+        function renderTemplates() {
+            const container = document.getElementById('templatesContainer');
+            if (templates.length === 0) {
+                container.innerHTML = '<span class="text-sm text-gray-500">No templates saved yet.</span>';
+                return;
+            }
+            
+            container.innerHTML = templates.map((tmpl, index) => `
+                <div class="template-badge flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-800 rounded-lg cursor-pointer hover:bg-purple-200">
+                    <button onclick="loadTemplate(${index})" class="font-semibold">
+                        📋 ${tmpl.name}
+                    </button>
+                    <button onclick="deleteTemplate(${index})" class="text-red-600 hover:text-red-800 ml-2">
+                        ✕
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function showSaveTemplateDialog() {
+            const name = prompt('Enter template name:', 'My Template');
+            if (!name) return;
+            
+            const template = {
+                name: name,
+                type: document.getElementById('inputType').value,
+                location: document.getElementById('inputLocation').value,
+                operator: document.getElementById('inputOperator').value
+            };
+            
+            templates.push(template);
+            saveTemplates();
+            renderTemplates();
+            showAlert(`Template "${name}" saved!`, 'success');
+        }
+
+        function loadTemplate(index) {
+            const tmpl = templates[index];
+            document.getElementById('inputType').value = tmpl.type;
+            document.getElementById('inputLocation').value = tmpl.location;
+            document.getElementById('inputOperator').value = tmpl.operator;
+            showAlert(`Template "${tmpl.name}" loaded!`, 'success');
+        }
+
+        function deleteTemplate(index) {
+            if (confirm('Delete this template?')) {
+                const name = templates[index].name;
+                templates.splice(index, 1);
+                saveTemplates();
+                renderTemplates();
+                showAlert(`Template "${name}" deleted`, 'info');
+            }
+        }
+
+        // ========== COPY LAST ENTRY ==========
+        function copyLastEntry() {
+            if (records.length === 0) {
+                showAlert('No previous entry to copy', 'info');
+                return;
+            }
+            
+            const last = records[records.length - 1];
+            document.getElementById('inputType').value = last.type;
+            document.getElementById('inputPH').value = last.ph || '';
+            document.getElementById('inputTemp').value = last.temperature || '';
+            document.getElementById('inputVolume').value = last.volume || '';
+            document.getElementById('inputFlowRate').value = last.flowRate || '';
+            document.getElementById('inputLocation').value = last.location;
+            document.getElementById('inputOperator').value = last.operator;
+            document.getElementById('inputRemarks').value = last.remarks;
+            
+            setCurrentDateTime(); // Update to current time
+            showAlert('Last entry copied! Update date/time and values as needed.', 'success');
+        }
+
+        // ========== UNDO SYSTEM ==========
+        function addToUndoStack(action, data) {
+            undoStack.push({ action, data, timestamp: Date.now() });
+            if (undoStack.length > 10) undoStack.shift(); // Keep last 10 actions
+        }
+
+        function undoLastAction() {
+            if (undoStack.length === 0) {
+                showAlert('Nothing to undo', 'info');
+                return;
+            }
+            
+            const lastAction = undoStack.pop();
+            
+            if (lastAction.action === 'delete') {
+                records.push(lastAction.data);
+                saveRecords();
+                showAlert('Deletion undone!', 'success');
+            } else if (lastAction.action === 'add') {
+                records = records.filter(r => r.id !== lastAction.data.id);
+                saveRecords();
+                showAlert('Addition undone!', 'success');
+            }
+            
+            updateOperatorFilter();
+            updateOperatorsList();
+            applyFilters();
+        }
+
+        // ========== BACKUP & RESTORE ==========
+        function backupData() {
+            const backup = {
+                records: records,
+                templates: templates,
+                exportDate: new Date().toISOString(),
+                version: '2.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Effluent_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showAlert('Backup downloaded successfully!', 'success');
+        }
+
+        function restoreData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    
+                    if (confirm(`Restore ${backup.records.length} records? This will overwrite current data!`)) {
+                        records = backup.records || [];
+                        templates = backup.templates || [];
+                        saveRecords();
+                        saveTemplates();
+                        renderTemplates();
+                        updateOperatorFilter();
+                        updateOperatorsList();
+                        applyFilters();
+                        showAlert('Data restored successfully!', 'success');
+                    }
+                } catch (err) {
+                    showAlert('Invalid backup file!', 'error');
+                }
+            };
+            reader.readAsText(file);
+            
+            event.target.value = ''; // Reset file input
+        }
+
+        // ========== BULK OPERATIONS ==========
+        function toggleSelectAll() {
+            const checkbox = document.getElementById('selectAll');
+            const dataToShow = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+            const start = (currentPage - 1) * recordsPerPage;
+            const end = start + recordsPerPage;
+            const pageRecords = dataToShow.slice().reverse().slice(start, end);
+            
+            if (checkbox.checked) {
+                pageRecords.forEach(r => selectedRecords.add(r.id));
+            } else {
+                pageRecords.forEach(r => selectedRecords.delete(r.id));
+            }
+            
+            updateBulkActionsBar();
+            renderRecords();
+        }
+
+        function toggleRecordSelection(id) {
+            if (selectedRecords.has(id)) {
+                selectedRecords.delete(id);
+            } else {
+                selectedRecords.add(id);
+            }
+            updateBulkActionsBar();
+        }
+
+        function updateBulkActionsBar() {
+            const bar = document.getElementById('bulkActionsBar');
+            const count = selectedRecords.size;
+            
+            if (count > 0) {
+                bar.style.display = 'block';
+                document.getElementById('selectedCount').textContent = count;
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function clearSelection() {
+            selectedRecords.clear();
+            document.getElementById('selectAll').checked = false;
+            updateBulkActionsBar();
+            renderRecords();
+        }
+
+        function bulkDelete() {
+            if (selectedRecords.size === 0) return;
+            
+            if (confirm(`Delete ${selectedRecords.size} selected record(s)?`)) {
+                records = records.filter(r => !selectedRecords.has(r.id));
+                saveRecords();
+                clearSelection();
+                updateOperatorFilter();
+                updateOperatorsList();
+                applyFilters();
+                showAlert(`${selectedRecords.size} record(s) deleted`, 'success');
+            }
+        }
+
+        // ========== CHARTS ==========
+        let allCharts = {};
+
+        function initializeCharts() {
+            // Charts will be created dynamically in updateCharts()
+            updateCharts();
+        }
+
+        function updateCharts() {
+            const dataToShow = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+            const container = document.getElementById('chartsContainer');
+
+            // Destroy existing charts
+            Object.values(allCharts).forEach(chart => chart.destroy());
+            allCharts = {};
+
+            if (dataToShow.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-8">No data available for charts</p>';
+                return;
+            }
+
+            // Group records by date
+            const recordsByDate = {};
+            dataToShow.forEach(record => {
+                if (!recordsByDate[record.date]) {
+                    recordsByDate[record.date] = [];
+                }
+                recordsByDate[record.date].push(record);
+            });
+
+            // Sort dates
+            const sortedDates = Object.keys(recordsByDate).sort();
+
+            // Create charts for each date
+            container.innerHTML = '';
+            sortedDates.forEach(date => {
+                const dateRecords = recordsByDate[date].sort((a, b) => a.time.localeCompare(b.time));
+                
+                // Create container for this date
+                const dateSection = document.createElement('div');
+                dateSection.className = 'mb-8 pb-6 border-b border-gray-200';
+                dateSection.innerHTML = `
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        📅 ${new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        <span class="text-sm font-normal text-gray-500">(${dateRecords.length} records)</span>
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <h4 class="text-center font-semibold mb-2 text-blue-600">pH Level</h4>
+                            <div class="chart-container">
+                                <canvas id="phChart_${date}"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-center font-semibold mb-2 text-red-600">Temperature (°C)</h4>
+                            <div class="chart-container">
+                                <canvas id="tempChart_${date}"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-center font-semibold mb-2 text-purple-600">Flow Rate (m³/hr)</h4>
+                            <div class="chart-container">
+                                <canvas id="flowChart_${date}"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(dateSection);
+
+                // Prepare data
+                const labels = dateRecords.map(r => r.time);
+                const phData = dateRecords.map(r => r.ph);
+                const tempData = dateRecords.map(r => r.temperature);
+                const flowData = dateRecords.map(r => r.flowRate);
+
+                // pH Chart
+                allCharts[`ph_${date}`] = new Chart(document.getElementById(`phChart_${date}`), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'pH Level',
+                            data: phData,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                min: 0,
+                                max: 14,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Temperature Chart
+                allCharts[`temp_${date}`] = new Chart(document.getElementById(`tempChart_${date}`), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Temperature (°C)',
+                            data: tempData,
+                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(1) + '°C';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Flow Rate Chart
+                allCharts[`flow_${date}`] = new Chart(document.getElementById(`flowChart_${date}`), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Flow Rate (m³/hr)',
+                            data: flowData,
+                            borderColor: 'rgb(168, 85, 247)',
+                            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        // ========== PDF EXPORT ==========
+        async function exportPDF() {
+            showAlert('Generating PDF report...', 'info', 2000);
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Title
+                doc.setFontSize(10);
+                const stats = [
+                    `Total Records: ${records.length}`,
+                    `Filtered Records: ${filteredRecords.length || records.length}`,
+                    `Today's Records: ${records.filter(r => r.date === new Date().toISOString().split('T')[0]).length}`,
+                    `Total Flow: ${document.getElementById('totalFlow').textContent}`,
+                    `Average pH: ${document.getElementById('avgPH').textContent}`,
+                    `Violations: ${document.getElementById('violations').textContent}`
+                ];
+                
+                let yPos = 48;
+                stats.forEach(stat => {
+                    doc.text(stat, 14, yPos);
+                    yPos += 6;
+                });
+                
+                // Table
+                doc.setFontSize(12);
+                doc.text('Recent Records', 14, yPos + 6);
+                
+                const dataToShow = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+                const recentRecords = dataToShow.slice(-10).reverse();
+                
+                yPos += 14;
+                doc.setFontSize(8);
+                
+                // Table headers
+                doc.setFillColor(240, 240, 240);
+                doc.rect(14, yPos, 182, 6, 'F');
+                doc.text('Date', 16, yPos + 4);
+                doc.text('Type', 40, yPos + 4);
+                doc.text('pH', 80, yPos + 4);
+                doc.text('Temp', 95, yPos + 4);
+                doc.text('Volume', 115, yPos + 4);
+                doc.text('Operator', 145, yPos + 4);
+                
+                yPos += 8;
+                
+                // Table rows
+                recentRecords.forEach(record => {
+                    if (yPos > 270) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    
+                    doc.text(record.date, 16, yPos);
+                    doc.text(record.type.substring(0, 15), 40, yPos);
+                    doc.text(record.ph !== null ? record.ph.toString() : '-', 80, yPos);
+                    doc.text(record.temperature !== null ? record.temperature + '°C' : '-', 95, yPos);
+                    doc.text(record.volume !== null ? record.volume.toFixed(2) : '-', 115, yPos);
+                    doc.text(record.operator.substring(0, 20), 145, yPos);
+                    
+                    yPos += 6;
+                });
+                
+                // Footer
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text('Effluent Recorder - Enhanced Pro Edition', 105, 285, { align: 'center' });
+                
+                doc.save(`Effluent_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                showAlert('PDF report generated successfully!', 'success');
+            } catch (error) {
+                showAlert('PDF generation failed: ' + error.message, 'error');
+            }
+        }
+
+        // ========== UTILITY FUNCTIONS ==========
+        function setCurrentDateTime() {
+            const now = new Date();
+            document.getElementById('inputDate').value = now.toISOString().split('T')[0];
+            document.getElementById('inputTime').value = now.toTimeString().slice(0,5);
+        }
+
+        function updateOperatorFilter() {
+            const operators = [...new Set(records.map(r => r.operator).filter(o => o))];
+            const filterSelect = document.getElementById('filterOperator');
+            const currentValue = filterSelect.value;
+            
+            filterSelect.innerHTML = '<option value="">🌍 All Operators</option>';
+            operators.sort().forEach(op => {
+                const option = document.createElement('option');
+                option.value = op;
+                option.textContent = '👤 ' + op;
+                filterSelect.appendChild(option);
+            });
+            
+            if (currentValue && operators.includes(currentValue)) {
+                filterSelect.value = currentValue;
+            }
+        }
+
+        function updateOperatorsList() {
+            const operators = [...new Set(records.map(r => r.operator).filter(o => o))];
+            const datalist = document.getElementById('operatorsList');
+            datalist.innerHTML = operators.map(op => `<option value="${op}">`).join('');
+        }
+
+        // ========== FILTERS ==========
+        function applyFilters() {
+            const searchText = document.getElementById('globalSearch').value.toLowerCase();
+            const operatorFilter = document.getElementById('filterOperator').value;
+            const typeFilter = document.getElementById('filterType').value;
+            const dateFilter = document.getElementById('filterDate').value;
+
+            filteredRecords = records.filter(record => {
+                let match = true;
+                
+                // Global search
+                if (searchText) {
+                    const searchableText = `${record.date} ${record.time} ${record.type} ${record.operator} ${record.location} ${record.remarks}`.toLowerCase();
+                    if (!searchableText.includes(searchText)) match = false;
+                }
+                
+                // Filters
+                if (operatorFilter && record.operator !== operatorFilter) match = false;
+                if (typeFilter && record.type !== typeFilter) match = false;
+                if (dateFilter && record.date !== dateFilter) match = false;
+                
+                return match;
+            });
+
+            updateActiveFiltersDisplay();
+            updateRecordsTitle();
+            currentPage = 1;
+            renderRecords();
+            updateStats();
+            updateCharts();
+        }
+
+        function clearFilters() {
+            document.getElementById('globalSearch').value = '';
+            document.getElementById('filterOperator').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterDate').value = '';
+            applyFilters();
+        }
+
+        function updateActiveFiltersDisplay() {
+            const container = document.getElementById('activeFilters');
+            const searchText = document.getElementById('globalSearch').value;
+            const operatorFilter = document.getElementById('filterOperator').value;
+            const typeFilter = document.getElementById('filterType').value;
+            const dateFilter = document.getElementById('filterDate').value;
+
+            let html = '';
+            
+            if (searchText) {
+                html += `<span class="filter-badge px-4 py-2 bg-cyan-400 text-cyan-900 rounded-full font-semibold flex items-center gap-2">
+                    🔍 "${searchText}"
+                    <button onclick="document.getElementById('globalSearch').value=''; applyFilters();" class="hover:text-red-600">✕</button>
+                </span>`;
+            }
+            
+            if (operatorFilter) {
+                html += `<span class="filter-badge px-4 py-2 bg-yellow-400 text-yellow-900 rounded-full font-semibold flex items-center gap-2">
+                    👤 ${operatorFilter}
+                    <button onclick="document.getElementById('filterOperator').value=''; applyFilters();" class="hover:text-red-600">✕</button>
+                </span>`;
+            }
+            
+            if (typeFilter) {
+                html += `<span class="filter-badge px-4 py-2 bg-green-400 text-green-900 rounded-full font-semibold flex items-center gap-2">
+                    🌊 ${typeFilter}
+                    <button onclick="document.getElementById('filterType').value=''; applyFilters();" class="hover:text-red-600">✕</button>
+                </span>`;
+            }
+            
+            if (dateFilter) {
+                html += `<span class="filter-badge px-4 py-2 bg-blue-400 text-blue-900 rounded-full font-semibold flex items-center gap-2">
+                    📅 ${dateFilter}
+                    <button onclick="document.getElementById('filterDate').value=''; applyFilters();" class="hover:text-red-600">✕</button>
+                </span>`;
+            }
+
+            if (!html) {
+                html = '<span class="px-4 py-2 bg-white bg-opacity-30 text-white rounded-full">No filters active</span>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updateRecordsTitle() {
+            const operatorFilter = document.getElementById('filterOperator').value;
+            const typeFilter = document.getElementById('filterType').value;
+            const dateFilter = document.getElementById('filterDate').value;
+
+            let title = 'All Records';
+            
+            if (operatorFilter && typeFilter) {
+                title = `${operatorFilter}'s ${typeFilter} Records`;
+            } else if (operatorFilter) {
+                title = `${operatorFilter}'s Records`;
+            } else if (typeFilter) {
+                title = `${typeFilter} Records`;
+            }
+            
+            if (dateFilter) {
+                title += ` (${dateFilter})`;
+            }
+
+            document.getElementById('recordsTitle').textContent = title;
+        }
+
+        function hasActiveFilters() {
+            return document.getElementById('filterOperator').value || 
+                   document.getElementById('filterType').value || 
+                   document.getElementById('filterDate').value ||
+                   document.getElementById('globalSearch').value;
+        }
+
+        // ========== RECORD MANAGEMENT ==========
+        function saveRecord() {
+            const date = document.getElementById('inputDate').value;
+            const time = document.getElementById('inputTime').value;
+            const type = document.getElementById('inputType').value;
+            const operator = document.getElementById('inputOperator').value.trim();
+
+            if (!date || !time) {
+                showAlert('Please enter date and time', 'error');
+                return;
+            }
+
+            if (!type) {
+                showAlert('Please select effluent type', 'error');
+                return;
+            }
+
+            if (!operator) {
+                showAlert('Operator name is required!', 'error');
+                document.getElementById('inputOperator').focus();
+                return;
+            }
+
+            const record = {
+                id: editingId || Date.now(),
+                date: date,
+                time: time,
+                type: type,
+                ph: document.getElementById('inputPH').value ? parseFloat(document.getElementById('inputPH').value) : null,
+                temperature: document.getElementById('inputTemp').value ? parseFloat(document.getElementById('inputTemp').value) : null,
+                volume: document.getElementById('inputVolume').value ? parseFloat(document.getElementById('inputVolume').value) : null,
+                flowRate: document.getElementById('inputFlowRate').value ? parseFloat(document.getElementById('inputFlowRate').value) : null,
+                location: document.getElementById('inputLocation').value,
+                operator: operator,
+                remarks: document.getElementById('inputRemarks').value,
+                photos: []
+            };
+
+            // Handle photo upload
+            const photoInput = document.getElementById('inputPhotos');
+            if (photoInput.files.length > 0) {
+                const promises = [];
+                for (let file of photoInput.files) {
+                    promises.push(new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsDataURL(file);
+                    }));
+                }
+                
+                Promise.all(promises).then(photos => {
+                    record.photos = photos;
+                    finalizeRecord(record);
+                });
+            } else {
+                if (editingId) {
+                    const existingRecord = records.find(r => r.id === editingId);
+                    if (existingRecord && existingRecord.photos) {
+                        record.photos = existingRecord.photos;
+                    }
+                }
+                finalizeRecord(record);
+            }
+        }
+
+        function finalizeRecord(record) {
+            if (editingId) {
+                const index = records.findIndex(r => r.id === editingId);
+                records[index] = record;
+                showAlert('Record updated successfully! ✅', 'success');
+                editingId = null;
+            } else {
+                records.push(record);
+                addToUndoStack('add', record);
+                showAlert(`Record saved for ${record.operator}! ✅`, 'success');
+            }
+
+            saveRecords();
+            clearForm();
+            updateOperatorFilter();
+            updateOperatorsList();
+            applyFilters();
+        }
+
+        function clearForm() {
+            document.getElementById('inputType').value = '';
+            document.getElementById('inputPH').value = '';
+            document.getElementById('inputTemp').value = '';
+            document.getElementById('inputVolume').value = '';
+            document.getElementById('inputFlowRate').value = '';
+            document.getElementById('inputLocation').value = '';
+            document.getElementById('inputOperator').value = '';
+            document.getElementById('inputRemarks').value = '';
+            document.getElementById('inputPhotos').value = '';
+            document.getElementById('formTitle').textContent = 'New Reading Entry';
+            document.getElementById('saveButtonText').textContent = 'Save Record';
+            document.getElementById('cancelButton').style.display = 'none';
+            editingId = null;
+            setCurrentDateTime();
+        }
+
+        function editRecord(id) {
+            const record = records.find(r => r.id === id);
+            if (!record) return;
+
+            document.getElementById('inputDate').value = record.date;
+            document.getElementById('inputTime').value = record.time;
+            document.getElementById('inputType').value = record.type;
+            document.getElementById('inputPH').value = record.ph || '';
+            document.getElementById('inputTemp').value = record.temperature || '';
+            document.getElementById('inputVolume').value = record.volume || '';
+            document.getElementById('inputFlowRate').value = record.flowRate || '';
+            document.getElementById('inputLocation').value = record.location;
+            document.getElementById('inputOperator').value = record.operator;
+            document.getElementById('inputRemarks').value = record.remarks;
+
+            editingId = id;
+            document.getElementById('formTitle').textContent = 'Edit Reading Entry';
+            document.getElementById('saveButtonText').textContent = 'Update Record';
+            document.getElementById('cancelButton').style.display = 'block';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            clearForm();
+        }
+
+        function deleteRecord(id) {
+            if (confirm('Are you sure you want to delete this record?')) {
+                const record = records.find(r => r.id === id);
+                addToUndoStack('delete', record);
+                
+                records = records.filter(r => r.id !== id);
+                saveRecords();
+                updateOperatorFilter();
+                updateOperatorsList();
+                applyFilters();
+                showAlert('Record deleted (Ctrl+Z to undo)', 'info');
+            }
+        }
+
+        // ========== RENDERING ==========
+        function renderRecords() {
+            const dataToShow = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+            const tbody = document.getElementById('recordsBody');
+            
+            if (dataToShow.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" class="px-4 py-8 text-center text-gray-500">No records found</td></tr>';
+                updatePagination(0);
+                return;
+            }
+
+            const start = (currentPage - 1) * recordsPerPage;
+            const end = start + recordsPerPage;
+            const pageRecords = dataToShow.slice().reverse().slice(start, end);
+            const totalRecords = dataToShow.length;
+
+            tbody.innerHTML = pageRecords.map((record, index) => {
+                const rowNumber = totalRecords - (start + index);
+                const isSelected = selectedRecords.has(record.id);
+                
+                return `
+                <tr class="border-t hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}">
+                    <td class="px-4 py-3 no-print">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleRecordSelection(${record.id})" class="row-checkbox">
+                    </td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-500">#${rowNumber}</td>
+                    <td class="px-4 py-3 text-sm">
+                        ${record.date}<br/>
+                        <span class="text-xs text-gray-500">${record.time}</span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">${record.type}</span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">${record.ph !== null ? record.ph : '—'}</td>
+                    <td class="px-4 py-3 text-sm">${record.temperature !== null ? record.temperature + ' °C' : '—'}</td>
+                    <td class="px-4 py-3 text-sm font-semibold">${record.volume !== null ? record.volume.toFixed(2) : '—'}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-purple-600">${record.flowRate !== null ? record.flowRate.toFixed(2) : '—'}</td>
+                    <td class="px-4 py-3 text-sm">${record.location || '—'}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-semibold">👤 ${record.operator}</span>
+                    </td>
+                    <td class="px-4 py-3 text-sm no-print">
+                        <button onclick="editRecord(${record.id})" class="text-blue-600 hover:text-blue-800 mr-2">✏️</button>
+                        <button onclick="deleteRecord(${record.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                    </td>
+                </tr>
+            `}).join('');
+
+            updatePagination(dataToShow.length);
+        }
+
+        function updatePagination(total) {
+            const totalPages = Math.ceil(total / recordsPerPage) || 1;
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('paginationInfo').textContent = `Showing ${Math.min(total, (currentPage - 1) * recordsPerPage + 1)}-${Math.min(total, currentPage * recordsPerPage)} of ${total}`;
+            
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || total === 0;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderRecords();
+            }
+        }
+
+        function nextPage() {
+            const dataToShow = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+            const totalPages = Math.ceil(dataToShow.length / recordsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderRecords();
+            }
+        }
+
+        // ========== STATISTICS ==========
+        function updateStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const dataToShow = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+            const todayRecords = dataToShow.filter(r => r.date === today);
+            
+            document.getElementById('totalRecords').textContent = dataToShow.length;
+            document.getElementById('totalAllRecords').textContent = records.length;
+            document.getElementById('todayRecords').textContent = todayRecords.length;
+            
+            // Calculate total flow
+            const totalFlow = dataToShow.reduce((sum, r) => sum + (r.volume || 0), 0);
+            document.getElementById('totalFlow').textContent = totalFlow.toFixed(2) + ' m³';
+            
+            // Calculate pH statistics
+            const phValues = dataToShow.filter(r => r.ph !== null).map(r => r.ph);
+            if (phValues.length > 0) {
+                const avgPH = phValues.reduce((a, b) => a + b, 0) / phValues.length;
+                const minPH = Math.min(...phValues);
+                const maxPH = Math.max(...phValues);
+                document.getElementById('avgPH').textContent = avgPH.toFixed(1);
+                document.getElementById('phRange').textContent = `${minPH.toFixed(1)}-${maxPH.toFixed(1)}`;
+            } else {
+                document.getElementById('avgPH').textContent = '—';
+                document.getElementById('phRange').textContent = '—';
+            }
+            
+            // Count unique operators
+            const uniqueOperators = new Set(dataToShow.map(r => r.operator).filter(o => o));
+            document.getElementById('totalOperators').textContent = uniqueOperators.size;
+        }
+
+        // ========== PHOTO VIEWER ==========
+        function viewPhotos(recordId) {
+            const record = records.find(r => r.id === recordId);
+            if (!record || !record.photos || record.photos.length === 0) return;
+
+            const gallery = document.getElementById('photoGallery');
+            gallery.innerHTML = record.photos.map(photo => `
+                <div class="border rounded-lg overflow-hidden">
+                    <img src="${photo}" alt="Photo" class="w-full h-auto">
+                </div>
+            `).join('');
+
+            document.getElementById('photoModal').style.display = 'flex';
+        }
+
+        function closePhotoModal() {
+            document.getElementById('photoModal').style.display = 'none';
+        }
+
+        // ========== EXPORT FUNCTIONS ==========
+        function exportCSV() {
+            const dataToExport = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+            
+            if (dataToExport.length === 0) {
+                showAlert('No records to export', 'info');
+                return;
+            }
+
+            const headers = ['Date', 'Time', 'Type', 'pH', 'Temperature (°C)', 'Volume (m³)', 'Flow Rate (m³/hr)', 'Location', 'Operator', 'Remarks'];
+            const csv = [
+                headers.join(','),
+                ...dataToExport.map(r => [
+                    r.date,
+                    r.time,
+                    `"${r.type}"`,
+                    r.ph !== null ? r.ph : '',
+                    r.temperature !== null ? r.temperature : '',
+                    r.volume !== null ? r.volume : '',
+                    r.flowRate !== null ? r.flowRate : '',
+                    `"${r.location}"`,
+                    `"${r.operator}"`,
+                    `"${r.remarks || ''}"`
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const filterSuffix = hasActiveFilters() ? '_filtered' : '';
+            a.download = `Effluent_Records${filterSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showAlert(`Exported ${dataToExport.length} records to CSV`, 'success');
+        }
+
+        async function exportPDF() {
+            const dataToExport = filteredRecords.length > 0 || hasActiveFilters() ? filteredRecords : records;
+            
+            if (dataToExport.length === 0) {
+                showAlert('No records to export', 'info');
+                return;
+            }
+
+            try {
+                showAlert('Generating PDF... Please wait', 'info', 0);
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Title
+                doc.setFontSize(20);
+                doc.setTextColor(30, 64, 175);
+                doc.text('Effluent Flow & Parameters Report', 105, 20, { align: 'center' });
+                
+                // Date
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: 'center' });
+                
+                // Statistics
+                doc.setFontSize(12);
+                doc.setTextColor(0);
+                doc.text('Summary Statistics', 14, 40);
+                
+                doc.setFontSize(10);
+                const stats = [
+                    `Total Records: ${dataToExport.length}`,
+                    `Total Volume: ${dataToExport.reduce((sum, r) => sum + (r.volume || 0), 0).toFixed(2)} m³`,
+                    `Date Range: ${dataToExport.length > 0 ? `${dataToExport[0].date} to ${dataToExport[dataToExport.length - 1].date}` : 'N/A'}`
+                ];
+                
+                stats.forEach((stat, i) => {
+                    doc.text(stat, 14, 48 + (i * 6));
+                });
+                
+                // Table Headers
+                let yPos = 70;
+                doc.setFillColor(30, 64, 175);
+                doc.rect(14, yPos, 182, 8, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(9);
+                
+                const headers = ['Date', 'Time', 'Type', 'pH', 'Temp', 'Volume', 'Flow', 'Operator'];
+                const colWidths = [24, 16, 20, 12, 14, 20, 18, 30];
+                let xPos = 14;
+                
+                headers.forEach((header, i) => {
+                    doc.text(header, xPos + 2, yPos + 5);
+                    xPos += colWidths[i];
+                });
+                
+                // Table Rows
+                yPos += 8;
+                doc.setTextColor(0);
+                doc.setFontSize(8);
+                
+                dataToExport.slice(0, 30).forEach((record, index) => {
+                    if (yPos > 270) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    
+                    // Alternate row colors
+                    if (index % 2 === 0) {
+                        doc.setFillColor(240, 240, 240);
+                        doc.rect(14, yPos, 182, 7, 'F');
+                    }
+                    
+                    xPos = 14;
+                    const rowData = [
+                        record.date,
+                        record.time,
+                        record.type.substring(0, 8),
+                        record.ph !== null ? record.ph.toString() : '—',
+                        record.temperature !== null ? `${record.temperature}°C` : '—',
+                        record.volume !== null ? record.volume.toFixed(1) : '—',
+                        record.flowRate !== null ? record.flowRate.toFixed(1) : '—',
+                        record.operator.substring(0, 12)
+                    ];
+                    
+                    rowData.forEach((data, i) => {
+                        doc.text(data, xPos + 2, yPos + 5);
+                        xPos += colWidths[i];
+                    });
+                    
+                    yPos += 7;
+                });
+                
+                // Footer
+                if (dataToExport.length > 30) {
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(`Note: Showing first 30 of ${dataToExport.length} records`, 14, yPos + 10);
+                }
+                
+                // Save PDF
+                const filterSuffix = hasActiveFilters() ? '_filtered' : '';
+                doc.save(`Effluent_Report${filterSuffix}_${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                // Clear the "generating" alert
+                document.getElementById('alertContainer').innerHTML = '';
+                showAlert(`PDF generated successfully with ${Math.min(dataToExport.length, 30)} records`, 'success');
+                
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                document.getElementById('alertContainer').innerHTML = '';
+                showAlert('Failed to generate PDF. Please try again.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
